@@ -1,0 +1,42 @@
+<?php
+/**
+ * @file
+ * Install file for node_iframe.
+ */
+
+/**
+ * Implements hook_install.
+ */
+function node_iframe_install() {
+  // Enable the node_iframe_tao theme.
+  theme_enable(array('node_iframe_tao'));
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function node_iframe_requirements($phase) {
+  $requirements = array();
+  
+  switch ($phase) {
+    case 'runtime':
+      $requirements['node_iframe_tao_enabled'] = array(
+        'title' => t('Node iframe theme'),
+        'description' => t('Please enable the Node iframe Tao theme.'),
+        'severity' => REQUIREMENT_WARNING,
+        'value' => t('Disabled'),
+      );
+      
+      // Ensure the node_iframe_tao theme is enabled.
+      $themes = list_themes();
+      if (isset($themes['node_iframe_tao']) && $themes['node_iframe_tao']->status) {
+        $requirements['node_iframe_tao_enabled']['severity'] = REQUIREMENT_OK;
+        $requirements['node_iframe_tao_enabled']['value'] = t('Enabled');
+        $requirements['node_iframe_tao_enabled']['description'] = t('The iframe theme is working.');
+      }
+      
+      break;
+  }
+  
+  return $requirements;
+}

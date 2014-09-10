@@ -1,0 +1,114 @@
+<?php
+/**
+ * @file
+ * Module file for node_iframe.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function node_iframe_menu() {
+  $items['node/%node/iframe'] = array(
+    'access arguments' => array('iframe', 1),
+    'access callback' => 'node_iframe_access',
+    'context' => MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'page callback' => 'node_page_view',
+    'theme callback' => 'node_iframe_theme_callback',
+    'title' => 'iframe',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 3,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function node_iframe_permission() {
+  $perms = array();
+
+  // Generate iframe view permissions for all applicable node types.
+  foreach (node_permissions_get_configured_types() as $type) {
+    $info = node_type_get_type($type);
+    
+    $perms["View $type in iframe"] = array(
+      'title' => t('%type_name: View in iframe', array('%type_name' => $info->name)),
+    );
+    $perms["Override view $type in iframe"] = array(
+      'title' => t('%type_name: View in iframe (override)', array('%type_name' => $info->name)),
+      'description' => t('View in iframes, even if the content is unpublished or inaccessible otherwise.'),
+      'restrict access' => TRUE,
+    );
+  }
+
+  return $perms;
+}
+
+/**
+ * Access callback for iframes
+ */
+function node_iframe_access($op, $node, $account = NULL) {
+  if (!$node) {
+    return FALSE;
+  }
+  // If no user object is supplied, the access check is for the current user.
+  if (empty($account)) {
+    $account = $GLOBALS['user'];
+  }
+
+  // Check for iframe view permissions for this node type.
+  $iframe_access = user_access("View $node->type in iframe", $account);
+  
+  $iframe_override = user_access("Override view $node->type in iframe", $account);
+  
+  // Check original node view permissions.
+  $node_access = node_access('view', $node, $account);
+  
+  return (($iframe_access && $node_access) || $iframe_override);
+}
+
+/**
+ * Theme callback for iframes.
+ */
+function node_iframe_theme_callback() {
+  $themes = list_themes();
+  $return = variable_get('theme_default');
+  
+  if (isset($themes['node_iframe_tao']) && $themes['node_iframe_tao']->status) {
+    $return = 'node_iframe_tao';
+  }
+  
+  return $return;
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function node_iframe_module_implements_alter(&$implementations, $hook) {
+  // Push the page build hook to the end.
+  if ($hook == 'page_build') {
+    if (isset($implementations['node_iframe'])) {
+      unset($implementations['node_iframe']);
+      $implementations['node_iframe'] = FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_page_build().
+ */
+function node_iframe_page_build(&$page) {
+  if (!module_exists('admin_menu')) {
+    return;
+  }
+  if (!user_access('access administration menu') || admin_menu_suppress(FALSE)) {
+    return;
+  }
+  
+  // Don't show the admin menu on iframe pages.
+  $is_iframe_page = (arg(0) === 'node' && arg(2) === 'iframe');
+  if ($is_iframe_page && isset($page['page_bottom']['admin_menu'])) {
+    unset($page['page_bottom']['admin_menu']);
+  }
+}

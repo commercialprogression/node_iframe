@@ -1,0 +1,3 @@
+name = Node iframe
+description = Provides a simple display of just node content at a subpath.
+core = 7.x
